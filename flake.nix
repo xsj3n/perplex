@@ -59,12 +59,17 @@
         postBuild = ''
           cat > $out/bin/perplex <<'EOF'
           #!/usr/bin/env sh
-          ${pkgs.xvfb-run} python ${server}/share/server/main.py &
+          #${pkgs.xvfb-run}/bin/xvfb-run
+          python ${server}/share/server/main.py &
           exec ${client}/bin/${name}
           EOF
           chmod +x $out/bin/perplex
         '';
     };
-      
+
+    apps."${system}".default = {
+      type = "app";
+      program = "${self.packages.${system}.default}/bin/perplex";
+    };
   };
 }

@@ -21,7 +21,9 @@ executable perplex-client
     main-is:          Main.hs
     -- other-modules:
     -- other-extensions:
-    build-depends:    base ^>=4.20.2.0,
+    build-depends:    word-wrap,
+                      ansi-terminal,
+                      base ^>=4.20.2.0,
                       network,
                       bytestring
 

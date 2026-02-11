@@ -12,7 +12,7 @@ import asyncio
 from dataclasses import dataclass
 
 link = "https://www.perplexity.ai/"
-logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s" )
+logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s", filename="server.log")
 
 driver_path = open("driver-path.txt").read().strip() + "/bin/undetected-chromedriver"
 chrome_path = subprocess.check_output(["which", "chromium-browser"]).decode().strip()
@@ -99,14 +99,14 @@ async def handler(reader: asyncio.StreamReader, writer: asyncio.StreamWriter) ->
             query = (await reader.readuntil(b"\r\n\r\n")).decode().strip()
             logging.info("Query/Option received:\n|%s|\n", query)
             if query == ":exit":
-                break
+                exit(0)
             
             result = ""
             if not wd.opts_present(query, addr):
                 loop = asyncio.get_event_loop()
                 result = await loop.run_in_executor(None, wd.query, query)
             else:
-                result = "[*] Option successfully set on the server"
+                result = "[*] Option successfully set on the serve;r"
             writer.write(result.encode())
             writer.write(b"\r\n\r\n")
             await writer.drain()
@@ -114,7 +114,7 @@ async def handler(reader: asyncio.StreamReader, writer: asyncio.StreamWriter) ->
     except asyncio.IncompleteReadError:
         logging.info("Client disconnected")
     except Exception as e:
-        logging.WARNING("Error communicating with [%s]: %s", addr, e)
+        logging.warn("Error communicating with [%s]: %s", addr, e)
     finally:
         logging.info("Closing connection from %s", addr)
         writer.close()
@@ -136,7 +136,7 @@ async def main() -> None:
             logging.info("Listening on %s:%d", host, port)
             await server.serve_forever()
     except Exception as e:
-        logging.ERROR("Exiting due to error: %s", e)
+        logging.error("Exiting due to error: %s", e)
         return
 
     
