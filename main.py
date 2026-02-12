@@ -60,10 +60,8 @@ class WaitDriver:
             EC.element_to_be_clickable((By.CSS_SELECTOR,'button[aria-label="Helpful"]'))
         )
         elements = self.driver.find_elements(By.CSS_SELECTOR, '[id^="markdown-content-"]')
-        if not self.save_ctx:
-            self.clear_ctx()
         
-        text = elements[len(elements) - 1].text
+        text = elements[-1].text
         citations_stripped = re.sub(r'\w+\+\d',"", text)
         return citations_stripped
 
@@ -106,10 +104,12 @@ async def handler(reader: asyncio.StreamReader, writer: asyncio.StreamWriter) ->
                 loop = asyncio.get_event_loop()
                 result = await loop.run_in_executor(None, wd.query, query)
             else:
-                result = "[*] Option successfully set on the serve;r"
+                result = "[*] Option successfully set on the server"
+            logging.info("Result:\n|%s|\n", result)
             writer.write(result.encode())
             writer.write(b"\r\n\r\n")
             await writer.drain()
+            
         
     except asyncio.IncompleteReadError:
         logging.info("Client disconnected")
