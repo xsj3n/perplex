@@ -10,7 +10,7 @@ import re
 import logging
 import asyncio
 from dataclasses import dataclass
-
+import time
 link = "https://www.perplexity.ai/"
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s", filename="server.log")
 
@@ -41,6 +41,7 @@ class WaitDriver:
         self.waiter = WebDriverWait(self.driver, 25, poll_frequency=0.2)
         self.query_prepend = "Keep answer to 4 sentences. "
         self.save_ctx = True
+        self.answer_count = 0
         self.driver.get(link)
         self.waiter.until(
             EC.element_to_be_clickable((By.CSS_SELECTOR, 'button[aria-label="Close"]'))
@@ -49,6 +50,7 @@ class WaitDriver:
     # log erros for these methods later
     def clear_ctx(self) -> None: 
         self.driver.get(link)
+        self.answer_count = 0 
         
     def query(self, query: str) -> str:
         query = self.query_prepend + query # configurable later
@@ -56,12 +58,17 @@ class WaitDriver:
         if close_elements:
             close_elements[0].click()
         self.driver.find_element(By.ID, "ask-input").send_keys(query + Keys.ENTER)
+
         self.waiter.until(
-            EC.element_to_be_clickable((By.CSS_SELECTOR,'button[aria-label="Helpful"]'))
+            lambda driver: len(driver.find_elements(By.CSS_SELECTOR,'button[aria-label="Helpful"]')) == self.answer_count + 1
         )
-        elements = self.driver.find_elements(By.CSS_SELECTOR, '[id^="markdown-content-"]')
-        
-        text = elements[-1].text
+        id = f"markdown-content-{self.answer_count}"
+        #self.waiter.until(
+        #    EC.element_to_be_clickable((By.ID, id))
+        #)
+        element = self.driver.find_element(By.ID, id)
+        self.answer_count += 1
+        text = element.text
         citations_stripped = re.sub(r'\w+\+\d',"", text)
         return citations_stripped
 
@@ -106,8 +113,7 @@ async def handler(reader: asyncio.StreamReader, writer: asyncio.StreamWriter) ->
             else:
                 result = "[*] Option successfully set on the server"
             logging.info("Result:\n|%s|\n", result)
-            writer.write(result.encode())
-            writer.write(b"\r\n\r\n")
+            writer.write(result.encode() + b"\r\n\r\n")
             await writer.drain()
             
         

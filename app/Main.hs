@@ -18,6 +18,7 @@ import qualified Text.Wrap as W
 import qualified Data.Text.IO as TIO
 import Data.Text.Encoding
 import Control.Monad.Extra (whenM)
+import Debug.Trace (trace)
 
 
 prompt :: IO C.ByteString
@@ -30,11 +31,11 @@ prompt = do
 clearInputLine :: IO ()
 clearInputLine = threadDelay 500000 >> putStr "\r\x1b[K"
 
-dropIfExit :: C.ByteString -> IO ()
-dropIfExit input = when (C.pack ":exit" `C.isInfixOf` input) exitSuccess >> pure ()
+dropIfExit :: C.ByteString -> Socket -> IO ()
+dropIfExit input sock = when (C.pack ":exit" `C.isInfixOf` input) (close sock >> exitSuccess) >> pure ()
 
 checkForHelpCommand :: C.ByteString -> IO Bool
-checkForHelpCommand input = if C.pack ":help" `C.isInfixOf` input then do
+checkForHelpCommand input = if C.pack ":help" == input then do
                               mapM_ putStrLn [ ":length <short|mid|long|uncapped> - Sets the response length\n"
                                              , ":ctx <off|on> - Whether to keep prior queries in context\n"
                                              , ":exit - Exit the program\n"
@@ -43,21 +44,30 @@ checkForHelpCommand input = if C.pack ":help" `C.isInfixOf` input then do
                             else
                               pure False 
 
+
+traceStr :: String -> IO ()
+traceStr s = putStrLn $ "DEBUG: " ++ s
+
 recvAndPrintToEnd :: Socket -> IO ()
 recvAndPrintToEnd sock = do
+  traceStr "recvAndPrintToEnd called"
   bs <- recv sock 1024
+  len <- (pure $ C.length bs)
+  putStrLn $ "DEBUG:\n" ++ "\t\tbyte length:\n\t\t " ++ (show len)
+  putStrLn $ "msg:\t\t" ++ C.unpack bs  
   unless  (C.pack "\r\n\r\n" `C.isInfixOf` bs) $ wrapPrint bs >> recvAndPrintToEnd sock
-  putStr "\n"
+  --putStr "\n"
   
 waitForReady :: Socket -> IO C.ByteString
 waitForReady sock = recv sock 64    
     
 clientLoop :: Socket -> IO ()
 clientLoop sock = do
+  traceStr "clientLoop called"
   input <- prompt
-  whenM (checkForHelpCommand input) $ clientLoop sock 
-  _     <- sendAll sock input
-  dropIfExit input
+  --whenM (checkForHelpCommand input) $ clientLoop sock 
+  _     <- sendAll sock input >> traceStr "sendAll called"
+  dropIfExit input sock 
   recvAndPrintToEnd sock
   clientLoop sock
 
@@ -68,7 +78,9 @@ waitForConnect :: Socket -> SockAddr -> IO ()
 waitForConnect sock sockAddr = _waitForConnect sock sockAddr 1 0
 
 wrapPrint :: C.ByteString -> IO ()
-wrapPrint str = TIO.putStrLn $ W.wrapText W.defaultWrapSettings 80 $ decodeUtf8Lenient str
+wrapPrint str = do
+  traceStr "wrapPrint called"
+  TIO.putStrLn $ W.wrapText W.defaultWrapSettings 80 $ decodeUtf8Lenient str
   
 _waitForConnect :: Socket -> SockAddr -> Int -> Int -> IO ()
 _waitForConnect sock sockAddr count attempts = do

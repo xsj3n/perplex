@@ -59,7 +59,8 @@
         postBuild = ''
           cat > $out/bin/perplex <<'EOF'
           #!/usr/bin/env sh
-          stdbuf -o0 ${pkgs.xvfb-run}/bin/xvfb-run python ${server}/share/server/main.py &
+          # stdbuf -o0 ${pkgs.xvfb-run}/bin/xvfb-run python ${server}/share/server/main.py &
+          python -u ${server}/share/server/main.py &
           exec ${client}/bin/${name}
           EOF
           chmod +x $out/bin/perplex
