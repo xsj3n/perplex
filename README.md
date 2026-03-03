@@ -22,6 +22,8 @@ There are a few commands that can be passed along to the python sever:
 
 :ctx <off|on> - Whether to keep prior queries in context
 
+:help - Displays all server commands 
+
 :exit - Exit the program
 ```
 
