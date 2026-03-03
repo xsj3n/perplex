@@ -13,7 +13,8 @@ It's pretty simple and still has the downside of having an extra chrome instance
 
 ## Usage
 --- 
-As you would expect, once the client connects to the server then you can begin to query perplexity. 
+As you would expect, once the client connects to the server then you can begin to query perplexity.
+
 There are a few commands that can be passed along to the python sever:
 
 ```
