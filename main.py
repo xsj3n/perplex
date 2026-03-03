@@ -11,11 +11,12 @@ import logging
 import asyncio
 from dataclasses import dataclass
 import time
+import os
 link = "https://www.perplexity.ai/"
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s", filename="server.log")
 
-driver_path = open("driver-path.txt").read().strip() + "/bin/undetected-chromedriver"
-chrome_path = subprocess.check_output(["which", "chromium-browser"]).decode().strip()
+driver_path = "@driverPath@"  + "/bin/undetected-chromedriver"
+chrome_path = "@chromePath@"  + "/bin/chromium"
 
 def length_translater(opt: str) -> str:
     match opt:

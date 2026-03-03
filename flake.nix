@@ -13,16 +13,13 @@
     name = "perplex-client";
     pkgs = import nixpkgs { inherit system; };
     c31420 = import nixpkgs-cabal31420 { inherit system; };
-    pyPkgs = pkgs.python314Packages;
     hkPkgs = pkgs.haskellPackages;
-    pyInputs = [
-      pkgs.python314
-      pyPkgs.selenium
-      pyPkgs.python-lsp-server
-      pyPkgs.undetected-chromedriver
-      pkgs.chromium
-      pkgs.xvfb-run
-    ];
+    pyEnv = pkgs.python314.withPackages (p: [
+      p.selenium
+      p.python-lsp-server
+      p.undetected-chromedriver
+      
+    ]);
     hkInputs = [
       hkPkgs.haskell-language-server
       c31420.cabal-install
@@ -30,46 +27,54 @@
       pkgs.haskell.compiler.native-bignum.ghcHEAD
     ];
 
+    otherInputs = [
+      pkgs.chromium
+      pkgs.xvfb-run
+      pkgs.undetected-chromedriver
+    ];
+    
+    
     client = hkPkgs.callCabal2nix "${name}" src { };
 
+    mainPy = pkgs.replaceVars ./main.py {
+      driverPath = "${pkgs.undetected-chromedriver}";
+      chromePath = "${pkgs.chromium}";
+    };  
+  
     server = pkgs.stdenv.mkDerivation {
       name = "perplex-selenium-server";
       src = src;
-      buildInputs = pyInputs;
+      buildInputs = otherInputs ++ [ pyEnv ];
       dontUnpack = true;
       installPhase = ''
         mkdir -p $out/bin $out/share/server/
-        cp ${src}/main.py $out/share/server/
-        echo "${pkgs.undetected-chromedriver}" > $out/share/server/driver-path.txt
+        cp ${mainPy}  $out/share/server/
       '';
     };
   in 
   {
     devShells."${system}".default = pkgs.mkShell {
-      packages = hkInputs ++ pyInputs;
-      shellHook = ''
-        echo "${pkgs.undetected-chromedriver}" > "driver-path.txt"
-      '';
+      packages = hkInputs ++ [ pyEnv.pkgs ];
     };
 
     packages."${system}".default = pkgs.symlinkJoin {
         name = "perplex";
         paths = [ server ];
-        buildInputs = [ pkgs.bash pkgs.xvfb-run client];
+        buildInputs = [ pkgs.bash pkgs.xvfb-run client server ];
         postBuild = ''
-          cat > $out/bin/perplex <<'EOF'
+          cat > $out/bin/${name} <<'EOF'
           #!/usr/bin/env sh
-          # stdbuf -o0 ${pkgs.xvfb-run}/bin/xvfb-run python ${server}/share/server/main.py &
-          python -u ${server}/share/server/main.py &
+          ${pkgs.xvfb-run}/bin/xvfb-run ${pyEnv}/bin/python -u ${mainPy} &
           exec ${client}/bin/${name}
           EOF
-          chmod +x $out/bin/perplex
+          chmod +x $out/bin/${name}
         '';
     };
 
     apps."${system}".default = {
       type = "app";
-      program = "${self.packages.${system}.default}/bin/perplex";
+      program = "${self.packages.${system}.default}/bin/${name}";
+      
     };
   };
 }
