@@ -4,6 +4,7 @@ import Network.Socket
 import Network.Socket.ByteString (recv, sendAll)
 import Data.List.NonEmpty as NE
 import qualified Data.ByteString.Char8 as C
+import qualified Data.ByteString as B
 import GHC.IO.Handle
 import GHC.IO.StdHandles
 import Control.Monad (unless)
@@ -45,30 +46,29 @@ checkForHelpCommand input = if C.pack ":help" == input then do
                               pure False 
 
 
-traceStr :: String -> IO ()
-traceStr s = putStrLn $ "DEBUG: " ++ s
+-- traceStr :: String -> IO ()
+-- traceStr s = putStrLn $ "DEBUG: " ++ s
 
-recvAndPrintToEnd :: Socket -> IO ()
-recvAndPrintToEnd sock = do
-  traceStr "recvAndPrintToEnd called"
-  bs <- recv sock 1024
-  len <- (pure $ C.length bs)
-  putStrLn $ "DEBUG:\n" ++ "\t\tbyte length:\n\t\t " ++ (show len)
-  putStrLn $ "msg:\t\t" ++ C.unpack bs  
-  unless  (C.pack "\r\n\r\n" `C.isInfixOf` bs) $ wrapPrint bs >> recvAndPrintToEnd sock
-  --putStr "\n"
+recvAndPrintToEnd :: Socket -> B.ByteString -> IO ()
+recvAndPrintToEnd sock accum = do
+  newBs <- recv sock 512
+  let combinedBs = accum <> newBs 
+  let delim = B.pack [13, 10, 13, 10]
+  if delim `B.isSuffixOf` combinedBs then
+    wrapPrint newBs >> putStr "\n"
+  else
+    wrapPrint newBs >> recvAndPrintToEnd sock accum
   
 waitForReady :: Socket -> IO C.ByteString
 waitForReady sock = recv sock 64    
     
 clientLoop :: Socket -> IO ()
 clientLoop sock = do
-  traceStr "clientLoop called"
   input <- prompt
-  --whenM (checkForHelpCommand input) $ clientLoop sock 
-  _     <- sendAll sock input >> traceStr "sendAll called"
+  whenM (checkForHelpCommand input) $ clientLoop sock 
+  sendAll sock input
   dropIfExit input sock 
-  recvAndPrintToEnd sock
+  recvAndPrintToEnd sock B.empty
   clientLoop sock
 
 waitThenClear :: IO ()
@@ -79,8 +79,7 @@ waitForConnect sock sockAddr = _waitForConnect sock sockAddr 1 0
 
 wrapPrint :: C.ByteString -> IO ()
 wrapPrint str = do
-  traceStr "wrapPrint called"
-  TIO.putStrLn $ W.wrapText W.defaultWrapSettings 80 $ decodeUtf8Lenient str
+  TIO.putStr $ W.wrapText W.defaultWrapSettings 80 $ decodeUtf8 str
   
 _waitForConnect :: Socket -> SockAddr -> Int -> Int -> IO ()
 _waitForConnect sock sockAddr count attempts = do

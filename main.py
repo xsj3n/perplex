@@ -58,18 +58,15 @@ class WaitDriver:
         if close_elements:
             close_elements[0].click()
         self.driver.find_element(By.ID, "ask-input").send_keys(query + Keys.ENTER)
-
+        
         self.waiter.until(
             lambda driver: len(driver.find_elements(By.CSS_SELECTOR,'button[aria-label="Helpful"]')) == self.answer_count + 1
         )
         id = f"markdown-content-{self.answer_count}"
-        #self.waiter.until(
-        #    EC.element_to_be_clickable((By.ID, id))
-        #)
         element = self.driver.find_element(By.ID, id)
         self.answer_count += 1
         text = element.text
-        citations_stripped = re.sub(r'\w+\+\d',"", text)
+        citations_stripped = re.sub(r'\w+\s*\+\d',"", text) # this is not safe at all
         return citations_stripped
 
 
@@ -113,14 +110,14 @@ async def handler(reader: asyncio.StreamReader, writer: asyncio.StreamWriter) ->
             else:
                 result = "[*] Option successfully set on the server"
             logging.info("Result:\n|%s|\n", result)
-            writer.write(result.encode() + b"\r\n\r\n")
+            writer.write(result.strip().encode("utf-8") + b"\r\n\r\n")
             await writer.drain()
             
         
     except asyncio.IncompleteReadError:
         logging.info("Client disconnected")
     except Exception as e:
-        logging.warn("Error communicating with [%s]: %s", addr, e)
+        logging.WARNING("Error communicating with [%s]: %s", addr, e)
     finally:
         logging.info("Closing connection from %s", addr)
         writer.close()

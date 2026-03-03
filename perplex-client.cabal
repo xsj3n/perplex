@@ -21,7 +21,8 @@ executable perplex-client
     main-is:          Main.hs
     -- other-modules:
     -- other-extensions:
-    build-depends:    extra,
+    build-depends:    code-page,
+                      extra,
                       text,
                       word-wrap,
                       ansi-terminal,
