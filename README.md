@@ -6,7 +6,8 @@ This is basically just a CLI tool for interacting with perplexity.
 
 ## How does it work?
 ---
-A python server & a chrome instance run in a virtual desktop vi xvfb. The server passes along your questions to the web page and returns them to the client.
+A python server & a chrome instance run in a virtual desktop vi xvfb. 
+The server passes along your questions to the web page and returns them to the client.
 It's pretty simple and still has the downside of having an extra chrome instance up. 
 
 ## Usage
