@@ -2,7 +2,7 @@
 ---
 ![example_perplex](https://github.com/user-attachments/assets/ed9c3328-4885-4e55-b61f-5211a95c6869)
 
-This is basically just a CLI tool for interacting with perplexity. 
+A simple CLI tool for interacting with perplexity. 
 
 ## How does it work?
 ---
